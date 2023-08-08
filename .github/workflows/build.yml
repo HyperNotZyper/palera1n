@@ -31,6 +31,7 @@ jobs:
       - name: Install dependencies (packages)
         run: |
           sudo apt-get -y update
+          sudo apt-get -y upgrade
           sudo apt-get -y install mandoc make
 
       - name: Build Documentation
@@ -796,19 +797,30 @@ jobs:
         id: branch-name
         uses: tj-actions/branch-names@v7
 
-      - name: Upload artifact
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: wangyucode/sftp-upload-action@v1.4.8
+      - name: Draft release
+        uses: softprops/action-gh-release@v0.1.15
         with:
-          host: ${{ secrets.NICKCHAN_FTP_HOST }}
-          port: ${{ secrets.NICKCHAN_FTP_PORT }}
-          username: palera1n
-          password: ${{ secrets.NICKCHAN_FTP_PASS }}
-          forceUpload: true
-          dryRun: false
-          localDir: 'ready/'
-          remoteDir: "/palera1n/artifacts/c-rewrite/${{ steps.branch-name.outputs.ref_branch || github.ref }}/${{ github.run_number }}"
+          draft: true
+          files: work/*.iso
 
+      - name: Release files to github
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v0.0.1
+          prerelease: false
+          name: Latest Palera1n Release
+          body: |
+           Files NECESSARY for Palen1x
+           
+    palera1n-linux-${arch}: palera1n CLI for Linux on CPU architecture ${arch}
+    palera1n-linux-${arch}.debug: Debug symbols for palera1n-linux-${arch}
+
+          files: |
+            work/palera1n-linux-x86_64
+            work/palera1n-linux-x86
+            work/palera1n-linux-arm64
+            work/palera1n-linux-armel
+            
   finish-build:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' }}
@@ -825,9 +837,3 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-tag
-
-      - name: Send Discord build message
-        run: |
-          COMMITMESSAGE=`git log --pretty=format:'- \`%h\` %s' -1 --reverse` &&
-          (curl "${{ secrets.DISCORD_WEBHOOK }}" -sS -H "Content-Type:application/json" -X POST -d "{\"content\":null,\"embeds\":[{\"title\":\"[palera1n:${{ steps.branch-name.outputs.ref_branch }}] Nightly Build ${{ github.run_number }}\",\"url\":\"https://github.com/palera1n/palera1n/actions/runs/${GITHUB_RUN_ID}\",\"color\":2829617,\"fields\":[{\"name\":\"Build tag\",\"value\":\"- \`$(cat build-tag.txt | sed 's|\n||')\`\"},{\"name\":\"Destination\",\"value\":\"- https://cdn.nickchan.lol/palera1n/artifacts/c-rewrite/${{ steps.branch-name.outputs.ref_branch }}/${{ github.run_number }}\"},{\"name\":\"Documentation\",\"value\":\"- [palera1n.1.html](https://cdn.nickchan.lol/palera1n/artifacts/c-rewrite/${{ steps.branch-name.outputs.ref_branch }}/${{ github.run_number }}/palera1n.1.html)\"},{\"name\":\"Main Artifacts\",\"value\":\"- [palera1n-iphoneos-arm64](https://cdn.nickchan.lol/palera1n/artifacts/c-rewrite/${{ steps.branch-name.outputs.ref_branch }}/${{ github.run_number }}/palera1n-iphoneos-arm64)\n- [palera1n-linux-arm64](https://cdn.nickchan.lol/palera1n/artifacts/c-rewrite/${{ steps.branch-name.outputs.ref_branch }}/${{ github.run_number }}/palera1n-linux-arm64)\n- [palera1n-linux-armel](https://cdn.nickchan.lol/palera1n/artifacts/c-rewrite/${{ steps.branch-name.outputs.ref_branch }}/${{ github.run_number }}/palera1n-linux-armel)\n- [palera1n-linux-x86](https://cdn.nickchan.lol/palera1n/artifacts/c-rewrite/$${{ steps.branch-name.outputs.ref_branch }}/${{ github.run_number }}/palera1n-linux-x86)\n- [palera1n-linux-x86_64](https://cdn.nickchan.lol/palera1n/artifacts/c-rewrite/${{ steps.branch-name.outputs.ref_branch }}/${{ github.run_number }}/palera1n-linux-x86_64)\n- [palera1n-macos-universal](https://cdn.nickchan.lol/palera1n/artifacts/c-rewrite/${{ steps.branch-name.outputs.ref_branch }}/${{ github.run_number }}/palera1n-macos-universal)\"}],\"footer\":{\"text\":\"${{ github.actor }}\", \"icon_url\": \"https://github.com/${{ github.actor }}.png\",\"timestamp\":\"$(date -u +"%FT%TZ")\"}}],\"username\":\"GitHub Actions\",\"avatar_url\":\"https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png\"}")
-    
